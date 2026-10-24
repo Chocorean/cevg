@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EVG Cedo — Générateur QR</title>
+  <title>Invitation Surprise — Générateur QR</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
@@ -300,9 +300,9 @@
   <span class="page-corner page-corner--br" aria-hidden="true">✦</span>
 
   <main class="container">
-    <section class="panel" aria-label="Générateur QR EVG">
+    <section class="panel" aria-label="Générateur QR invitation surprise">
       <header class="panel__header">
-        <h1 class="panel__title">Générateur de QR — EVG Cedo</h1>
+        <h1 class="panel__title">Générateur de QR — Invitation Surprise</h1>
         <p class="panel__eyebrow">7 Wonders • Invitations Personnalisées</p>
       </header>
 
@@ -331,7 +331,7 @@
 
       <div class="preview">
         <article class="qr-card" aria-label="Aperçu du QR">
-          <div class="qr-card__header">Portail RSVP EVG</div>
+          <div class="qr-card__header">Portail de la Quête</div>
           <div class="qr-card__body">
             <div id="qrTarget" aria-label="QR code"></div>
             <p id="guestName" class="guest">—</p>
@@ -533,11 +533,11 @@
       ctx.textAlign = 'center';
       ctx.fillStyle = '#f0d060';
       ctx.font = '900 56px "Cinzel Decorative", serif';
-      ctx.fillText('EVG Cedo', w / 2, cardY + 76);
+      ctx.fillText('NOUVELLE QUÊTE !', w / 2, cardY + 76);
 
       ctx.fillStyle = 'rgba(240,210,140,0.78)';
       ctx.font = '600 26px "Cinzel", serif';
-      ctx.fillText('Invitation personnalisée', w / 2, cardY + 124);
+      ctx.fillText('Une invitation surprise t\'attend', w / 2, cardY + 124);
 
       // Guest name
       ctx.fillStyle = '#3a2200';
@@ -546,7 +546,7 @@
 
       ctx.font = '600 24px "Cinzel", serif';
       ctx.fillStyle = '#5a3b0a';
-      ctx.fillText('Scanne le QR pour confirmer ta présence', w / 2, cardY + 300);
+      ctx.fillText('Scanne ce sceau pour répondre à l\'appel', w / 2, cardY + 300);
 
       // QR bloc
       const qrFrameSize = 660;
@@ -607,7 +607,7 @@
 
       const a = document.createElement('a');
       a.href = out.toDataURL('image/png');
-      a.download = `evg-qrcode-${slugify(lastGuestName)}.png`;
+      a.download = `invitation-surprise-qrcode-${slugify(lastGuestName)}.png`;
       a.click();
 
       showStatus('PNG exporté ✅');

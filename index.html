@@ -83,6 +83,75 @@
     .page-corner--br { bottom: 12px; right: 16px; transform: scale(-1); }
 
     /* ═══════════════════════════════════════════
+       DÉCORATIONS DE BORD (version légère CPU)
+       Pions / dés / jetons fixes + petite ombre
+    ═══════════════════════════════════════════ */
+    .board-decor {
+      position: fixed;
+      pointer-events: none;
+      user-select: none;
+      z-index: 2;
+      line-height: 1;
+      opacity: 0.82;
+      text-shadow:
+        0 6px 10px rgba(0,0,0,0.58),
+        0 0 5px rgba(0,0,0,0.34);
+    }
+
+    .board-decor--pawn {
+      top: 18%;
+      left: 2.2%;
+      font-size: 2.7rem;
+      color: #f6f4ef;
+      transform: rotate(-6deg);
+      animation: decor-bob-pawn 6.2s ease-in-out infinite;
+    }
+    .board-decor--dice {
+      top: 24%;
+      right: 2.8%;
+      font-size: 2.4rem;
+      transform: rotate(8deg);
+      animation: decor-bob-dice 7s ease-in-out infinite;
+      animation-delay: -1.2s;
+    }
+    .board-decor--meeple {
+      bottom: 24%;
+      left: 3%;
+      font-size: 2.35rem;
+      transform: rotate(-5deg);
+      animation: decor-bob-meeple 7.6s ease-in-out infinite;
+      animation-delay: -0.7s;
+    }
+    .board-decor--token {
+      bottom: 14%;
+      right: 2.9%;
+      font-size: 2.25rem;
+      transform: rotate(9deg);
+      animation: decor-bob-token 6.6s ease-in-out infinite;
+      animation-delay: -2.1s;
+    }
+
+    @keyframes decor-bob-pawn {
+      0%, 100% { transform: translateY(0) rotate(-6deg) scale(1); }
+      50%      { transform: translateY(-6px) rotate(-4deg) scale(1.04); }
+    }
+
+    @keyframes decor-bob-dice {
+      0%, 100% { transform: translateY(0) rotate(8deg) scale(1); }
+      50%      { transform: translateY(6px) rotate(6deg) scale(1.035); }
+    }
+
+    @keyframes decor-bob-meeple {
+      0%, 100% { transform: translateY(0) rotate(-5deg) scale(1); }
+      50%      { transform: translateY(-5px) rotate(-3deg) scale(1.038); }
+    }
+
+    @keyframes decor-bob-token {
+      0%, 100% { transform: translateY(0) rotate(9deg) scale(1); }
+      50%      { transform: translateY(5px) rotate(7deg) scale(1.036); }
+    }
+
+    /* ═══════════════════════════════════════════
        CONTENEUR PRINCIPAL
     ═══════════════════════════════════════════ */
     .container {
@@ -548,6 +617,12 @@
       }
     }
 
+    @media (prefers-reduced-motion: reduce) {
+      .board-decor {
+        animation: none !important;
+      }
+    }
+
     /* ═══════════════════════════════════════════
        RESPONSIVE — MOBILE (≤ 560 px)
 
@@ -566,6 +641,18 @@
       }
 
       .page-corner { display: none; }
+
+      .board-decor {
+        font-size: 1.95rem;
+        opacity: 0.76;
+      }
+
+      /* On garde les 4 éléments visibles sur mobile,
+         légèrement décalés vers l'extérieur pour border l'écran */
+      .board-decor--pawn   { left: -0.15rem; top: 12%; animation-duration: 8s; }
+      .board-decor--dice   { right: -0.15rem; top: 27%; display: block; animation-duration: 9s; }
+      .board-decor--meeple { left: -0.15rem; bottom: 24%; animation-duration: 10s; }
+      .board-decor--token  { right: -0.15rem; bottom: 10%; display: block; animation-duration: 8.5s; }
 
       .container { gap: 1.3rem; }
 
@@ -655,6 +742,12 @@
   <span class="page-corner page-corner--tr" aria-hidden="true">✦</span>
   <span class="page-corner page-corner--bl" aria-hidden="true">✦</span>
   <span class="page-corner page-corner--br" aria-hidden="true">✦</span>
+
+  <!-- Décor vivant en bord d'écran -->
+  <span class="board-decor board-decor--pawn" aria-hidden="true">♟️</span>
+  <span class="board-decor board-decor--dice" aria-hidden="true">🎲</span>
+  <span class="board-decor board-decor--meeple" aria-hidden="true">🃏</span>
+  <span class="board-decor board-decor--token" aria-hidden="true">🪙</span>
 
   <main class="container">
 

@@ -657,11 +657,11 @@
       }
 
       /* On garde les 4 éléments visibles sur mobile,
-         légèrement décalés vers l'extérieur pour border l'écran */
-      .board-decor--pawn   { left: -0.15rem; top: 12%; animation-duration: 8s; }
-      .board-decor--dice   { right: -0.15rem; top: 27%; display: block; animation-duration: 9s; }
-      .board-decor--meeple { left: -0.15rem; bottom: 24%; animation-duration: 10s; }
-      .board-decor--token  { right: -0.15rem; bottom: 10%; display: block; animation-duration: 8.5s; }
+         avec plus d'espace depuis les bords de l'écran */
+      .board-decor--pawn   { left: max(1rem, env(safe-area-inset-left)); top: 12%; animation-duration: 8s; }
+      .board-decor--dice   { right: max(1rem, env(safe-area-inset-right)); top: 27%; display: block; animation-duration: 9s; }
+      .board-decor--meeple { left: max(1rem, env(safe-area-inset-left)); bottom: 24%; animation-duration: 10s; }
+      .board-decor--token  { right: max(1rem, env(safe-area-inset-right)); bottom: 10%; display: block; animation-duration: 8.5s; }
 
       .container { gap: 1.3rem; }
 

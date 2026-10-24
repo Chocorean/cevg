@@ -6,7 +6,7 @@
   <title>EVG Cedo — RSVP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Great+Vibes&display=swap" rel="stylesheet">
   <style>
     /* ═══════════════════════════════════════════
        RESET & TOKENS
@@ -236,25 +236,34 @@
       text-align: center;
     }
 
-    .info-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 0.8rem;
-      margin-bottom: 1.5rem;
+    .invitation-intro {
+      font-size: clamp(0.95rem, 2.3vw, 1.14rem);
+      letter-spacing: 0.03em;
+      color: #4a2b00;
+      margin-bottom: 0.2rem;
     }
 
-    .info-row {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.75rem;
-      font-size: clamp(0.95rem, 2.5vw, 1.2rem);
-      font-weight: 600;
-      color: var(--parchment-txt);
-      letter-spacing: 0.02em;
+    .invitee-name {
+      display: block;
+      margin-top: 0.15rem;
+      font-family: 'Great Vibes', 'Brush Script MT', cursive;
+      font-size: clamp(2.8rem, 9.2vw, 4.5rem);
+      font-weight: 400;
+      color: #5a2800;
+      line-height: 1.06;
+      text-shadow:
+        0 1px 0 rgba(255,255,255,0.25),
+        0 6px 14px rgba(122, 74, 0, 0.25);
     }
 
-    .info-row__icon { font-size: 1.3em; }
+    .invitation-copy {
+      margin: 0.45rem auto 1.15rem;
+      max-width: 52ch;
+      font-size: clamp(0.9rem, 1.9vw, 1.02rem);
+      line-height: 1.7;
+      color: #3a2200;
+      letter-spacing: 0.01em;
+    }
 
     .wonder-board__tagline {
       font-family: 'Cinzel Decorative', serif;
@@ -658,6 +667,9 @@
 
       .wonder-board__header  { padding: 0.9rem 1.2rem; }
       .wonder-board__body    { padding: 1.2rem 1rem; }
+      .invitation-intro      { font-size: 0.9rem; }
+      .invitee-name          { font-size: clamp(2.35rem, 13.2vw, 3.2rem); }
+      .invitation-copy       { font-size: 0.86rem; margin: 0.35rem auto 1rem; }
       .wonder-board__tagline { font-size: 0.75rem; }
 
       .divider       { gap: 0.5rem; }
@@ -766,17 +778,14 @@
       </header>
 
       <div class="wonder-board__body">
-        <div class="info-grid">
-          <div class="info-row">
-            <span class="info-row__icon" aria-hidden="true">📅</span>
-            <span>Le <strong>[DATE]</strong></span>
-          </div>
-          <div class="info-row">
-            <span class="info-row__icon" aria-hidden="true">📍</span>
-            <span><strong>[LIEU]</strong></span>
-          </div>
-        </div>
-        <p class="wonder-board__tagline">Serez-vous au rendez-vous de l'aventure&nbsp;?</p>
+        <p class="invitation-intro">
+          <span id="inviteeName" class="invitee-name"></span>
+        </p>
+
+        <p class="invitation-copy">
+          Le conseil des compagnons vous invite officiellement à rejoindre l'épopée de l'EVG de Cedo, le <b>XXXXXX</b> a <b>LIEU DU TRUC</b>.
+        </p>
+        <p class="wonder-board__tagline">Répondez à l'appel et choisissez votre destinée.</p>
       </div>
     </article>
 
@@ -898,6 +907,25 @@
         msg:   "Ton absence est notée. Que tu sois pardonné par les dieux du plateau.",
       },
     };
+
+    /* ================================================================
+       PERSONNALISATION — nom via query param ?name=
+       ================================================================ */
+    function getInviteeNameFromQuery() {
+      const params = new URLSearchParams(window.location.search);
+      const rawName = (params.get('name') || '').trim().replace(/\s+/g, ' ');
+      const interName = rawName.slice(0, 60) || 'aventurier';
+      const capName = interName.charAt(0).toUpperCase() + interName.slice(1);
+      return "Noble " + capName;
+    }
+
+    function applyInviteeName() {
+      const inviteeNameEl = document.getElementById('inviteeName');
+      if (!inviteeNameEl) return;
+      inviteeNameEl.textContent = getInviteeNameFromQuery();
+    }
+
+    applyInviteeName();
 
     /* ================================================================
        ENVOI DU VOTE

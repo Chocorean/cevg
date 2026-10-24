@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EVG Cedo — RSVP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════
+       RESET & TOKENS
+    ═══════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:          #c9a227;
+      --gold-light:    #f0d060;
+      --gold-dark:     #7a6010;
+      --parchment:     #f5e8cc;
+      --parchment-mid: #dfc894;
+      --parchment-drk: #b8935a;
+      --parchment-txt: #2a1800;
+      --board-bg:      #08120a;
+    }
+
+    /* ═══════════════════════════════════════════
+       BODY — PLATEAU DE JEU
+       Empilement de couches :
+         1. Vignette sombre en vignettage
+         2-5. Taches de « territoires » colorés (carte de 7W)
+         6. Points aux intersections de la grille
+         7-8. Lignes H & V de la grille
+    ═══════════════════════════════════════════ */
+    body {
+      min-height: 100vh;
+      min-height: 100dvh; /* dynamic viewport sur mobile (barre d'adresse) */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2.5rem 1rem;
+      padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
+      font-family: 'Cinzel', 'Palatino Linotype', Palatino, serif;
+      background-color: var(--board-bg);
+      background-image:
+        radial-gradient(ellipse 110% 110% at 50% 50%,
+          rgba(12, 28, 15, 0.1) 0%, rgba(4, 8, 5, 0.96) 100%),
+        radial-gradient(ellipse 55% 45% at 10% 18%,
+          rgba(22, 75, 38, 0.55) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 55% at 90% 82%,
+          rgba(48, 22, 78, 0.45) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 50% at 80% 10%,
+          rgba(88, 62, 6, 0.45) 0%, transparent 55%),
+        radial-gradient(ellipse 45% 35% at 18% 88%,
+          rgba(82, 18, 10, 0.4) 0%, transparent 55%),
+        radial-gradient(circle, rgba(201,162,39,0.30) 1.5px, transparent 1.5px),
+        linear-gradient(rgba(201,162,39,0.09) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(201,162,39,0.09) 1px, transparent 1px);
+      background-size:
+        100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%,
+        80px 80px, 80px 80px, 80px 80px;
+      background-position:
+        0 0, 0 0, 0 0, 0 0, 0 0,
+        40px 40px, 0 0, 0 0;
+      overflow-x: hidden;
+    }
+
+    /* ═══════════════════════════════════════════
+       ORNEMENTS DE COIN (page entière)
+    ═══════════════════════════════════════════ */
+    .page-corner {
+      position: fixed;
+      color: rgba(201, 162, 39, 0.32);
+      font-size: 2.8rem;
+      line-height: 1;
+      pointer-events: none;
+      z-index: 0;
+      user-select: none;
+    }
+    .page-corner--tl { top: 12px;  left: 16px; }
+    .page-corner--tr { top: 12px;  right: 16px;  transform: scaleX(-1); }
+    .page-corner--bl { bottom: 12px; left: 16px;  transform: scaleY(-1); }
+    .page-corner--br { bottom: 12px; right: 16px; transform: scale(-1); }
+
+    /* ═══════════════════════════════════════════
+       CONTENEUR PRINCIPAL
+    ═══════════════════════════════════════════ */
+    .container {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2.5rem;
+      width: 100%;
+      max-width: 780px;
+    }
+
+    /* ═══════════════════════════════════════════
+       WONDER BOARD — carte centrale (plateau de merveille)
+    ═══════════════════════════════════════════ */
+    .wonder-board {
+      position: relative;
+      width: 100%;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 2px solid var(--gold);
+      /* Cadre dorée sur plusieurs épaisseurs */
+      box-shadow:
+        0 0 0 1px  rgba(201,162,39,0.25),
+        0 0 0 5px  rgba(201,162,39,0.07),
+        0 0 0 6px  rgba(201,162,39,0.38),
+        0 0 60px   rgba(0,0,0,0.95),
+        inset 0 0 80px rgba(180,130,40,0.07);
+      /* Parchemin texturé */
+      background:
+        radial-gradient(ellipse 32% 22% at 22% 32%, rgba(180,130,50,0.18) 0%, transparent 50%),
+        radial-gradient(ellipse 28% 28% at 78% 72%, rgba(145, 95,18,0.14) 0%, transparent 50%),
+        linear-gradient(155deg, #f5e8cc 0%, #ead5a2 35%, #dfc890 65%, #d4b878 100%);
+    }
+
+    /* Losanges aux quatre coins */
+    .wonder-board__corner {
+      position: absolute;
+      z-index: 3;
+      color: var(--gold);
+      font-size: 1rem;
+      line-height: 1;
+      pointer-events: none;
+    }
+    .wonder-board__corner--tl { top: 7px;    left: 8px;  }
+    .wonder-board__corner--tr { top: 7px;    right: 8px; }
+    .wonder-board__corner--bl { bottom: 7px; left: 8px;  }
+    .wonder-board__corner--br { bottom: 7px; right: 8px; }
+
+    /* Bandeau titre vert foncé (style plateau 7W) */
+    .wonder-board__header {
+      padding: 1.1rem 3rem;
+      text-align: center;
+      border-bottom: 2px solid var(--gold);
+      background: linear-gradient(90deg,
+        #071510 0%, #102818 15%, #194030 50%, #102818 85%, #071510 100%);
+      position: relative;
+    }
+
+    .wonder-board__title {
+      font-family: 'Cinzel Decorative', 'Palatino Linotype', serif;
+      font-size: clamp(1.4rem, 4.5vw, 2.4rem);
+      font-weight: 900;
+      color: var(--gold-light);
+      text-shadow:
+        0 0 30px rgba(201,162,39,0.75),
+        2px 2px 6px rgba(0,0,0,0.9);
+      letter-spacing: 0.06em;
+    }
+
+    .wonder-board__eyebrow {
+      margin-top: 4px;
+      font-size: 0.64rem;
+      letter-spacing: 0.42em;
+      text-transform: uppercase;
+      color: rgba(240,210,140,0.60);
+    }
+
+    .wonder-board__body {
+      padding: 2rem 3rem;
+      text-align: center;
+    }
+
+    .info-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .info-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      font-size: clamp(0.95rem, 2.5vw, 1.2rem);
+      font-weight: 600;
+      color: var(--parchment-txt);
+      letter-spacing: 0.02em;
+    }
+
+    .info-row__icon { font-size: 1.3em; }
+
+    .wonder-board__tagline {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: clamp(0.78rem, 1.7vw, 0.98rem);
+      font-style: italic;
+      font-weight: 400;
+      color: #3d2200;
+      border-top: 1px solid var(--parchment-drk);
+      padding-top: 1.1rem;
+      letter-spacing: 0.03em;
+      line-height: 1.6;
+    }
+
+    /* ═══════════════════════════════════════════
+       SÉPARATEUR
+    ═══════════════════════════════════════════ */
+    .divider {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--gold), transparent);
+    }
+    .divider__text {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 0.85rem;
+      color: var(--gold);
+      white-space: nowrap;
+      letter-spacing: 0.06em;
+    }
+
+    /* ═══════════════════════════════════════════
+       CARTES D'ÂGE — boutons de réponse
+    ═══════════════════════════════════════════ */
+    .cards-row {
+      display: flex;
+      /* Fluide : 0.7rem sur petit écran → 1.5rem sur grand écran */
+      gap: clamp(0.7rem, 2vw, 1.5rem);
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .age-card {
+      position: relative;
+      width: 168px;
+      height: 252px;
+      border: 2px solid var(--gold);
+      border-radius: 8px;
+      cursor: pointer;
+      overflow: hidden;
+      font-family: 'Cinzel', serif;
+      outline: none;
+      touch-action: manipulation;          /* supprime le délai 300 ms sur iOS */
+      -webkit-tap-highlight-color: transparent;
+      /* Perspective 3-D façon « prendre une carte en main » */
+      transform: perspective(800px) rotateY(0deg) translateY(0) scale(1);
+      transition:
+        transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1),
+        box-shadow 0.32s ease,
+        border-color 0.32s;
+      box-shadow:
+        0 5px 20px rgba(0,0,0,0.8),
+        0 0 0 1px rgba(201,162,39,0.35);
+    }
+
+    .age-card:hover {
+      transform: perspective(800px) rotateY(-6deg) translateY(-16px) scale(1.07);
+      box-shadow:
+        0 28px 55px rgba(0,0,0,0.9),
+        0 0 0 2px var(--gold),
+        0 0 32px rgba(201,162,39,0.38);
+      border-color: var(--gold-light);
+      z-index: 5;
+    }
+
+    .age-card:active {
+      transform: perspective(800px) rotateY(0deg) translateY(-5px) scale(1.02);
+      transition-duration: 0.1s;
+    }
+
+    .age-card:disabled {
+      cursor: not-allowed;
+      filter: saturate(0.35) brightness(0.55);
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    /* Reflet de lumière sur la carte au survol */
+    .age-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        108deg,
+        transparent 25%,
+        rgba(255,255,255,0.07) 45%,
+        rgba(255,255,255,0.13) 50%,
+        rgba(255,255,255,0.07) 55%,
+        transparent 75%
+      );
+      opacity: 0;
+      transition: opacity 0.32s;
+      pointer-events: none;
+      z-index: 4;
+      border-radius: 6px;
+    }
+    .age-card:hover::before { opacity: 1; }
+
+    /* Cadre intérieur + losanges */
+    .age-card__frame {
+      position: absolute;
+      inset: 4px;
+      border: 1px solid rgba(201,162,39,0.32);
+      border-radius: 5px;
+      pointer-events: none;
+      z-index: 3;
+    }
+    .age-card__frame::before {
+      content: '◆';
+      position: absolute;
+      top: 2px; left: 3px;
+      color: rgba(201,162,39,0.58);
+      font-size: 7px;
+      line-height: 1;
+    }
+    .age-card__frame::after {
+      content: '◆';
+      position: absolute;
+      bottom: 2px; right: 3px;
+      color: rgba(201,162,39,0.58);
+      font-size: 7px;
+      line-height: 1;
+    }
+
+    /* Bandeau catégorie (haut de carte) */
+    .age-card__category {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      padding: 7px 8px 6px;
+      font-size: 0.54rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.88);
+      text-align: center;
+      z-index: 2;
+      border-bottom: 1px solid rgba(201,162,39,0.38);
+    }
+
+    /* Zone icône centrale */
+    .age-card__icon-area {
+      position: absolute;
+      top: 32px; left: 0; right: 0; bottom: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+    }
+
+    .age-card__icon {
+      font-size: 4.4rem;
+      line-height: 1;
+      filter: drop-shadow(0 4px 10px rgba(0,0,0,0.75));
+      transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .age-card:hover .age-card__icon {
+      transform: scale(1.18) translateY(-5px);
+    }
+
+    /* Bandeau nom (bas de carte) */
+    .age-card__bottom {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 10px 8px 8px;
+      border-top: 1px solid rgba(201,162,39,0.38);
+      text-align: center;
+      z-index: 2;
+    }
+    .age-card__name {
+      display: block;
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--gold-light);
+      text-shadow: 0 2px 8px rgba(0,0,0,0.9);
+      letter-spacing: 0.08em;
+    }
+    .age-card__label {
+      display: block;
+      font-size: 0.58rem;
+      letter-spacing: 0.12em;
+      color: rgba(240,200,130,0.62);
+      margin-top: 3px;
+    }
+
+    /* ── Thèmes chromatiques des cartes ── */
+
+    /* OUI — Guilde (violet) : carte la plus précieuse de 7W */
+    .age-card--yes {
+      background: linear-gradient(165deg,
+        #5e2898 0%, #401a7a 35%, #2c1065 65%, #1a0842 100%);
+    }
+    .age-card--yes .age-card__category {
+      background: linear-gradient(90deg, #4e1e82, #7038b0, #4e1e82);
+    }
+    .age-card--yes .age-card__bottom {
+      background: linear-gradient(to top, #130635, #2c1065);
+    }
+
+    /* PEUT-ÊTRE — Comptoir (ambre) : carte commerciale */
+    .age-card--maybe {
+      background: linear-gradient(165deg,
+        #8a6012 0%, #6a4a00 35%, #4a3200 65%, #2e1e00 100%);
+    }
+    .age-card--maybe .age-card__category {
+      background: linear-gradient(90deg, #7a5200, #aa7c15, #7a5200);
+    }
+    .age-card--maybe .age-card__bottom {
+      background: linear-gradient(to top, #1e1200, #4a3200);
+    }
+
+    /* NON — Légion (cramoisi) : carte militaire */
+    .age-card--no {
+      background: linear-gradient(165deg,
+        #8c1616 0%, #6c0e0e 35%, #4c0808 65%, #2e0404 100%);
+    }
+    .age-card--no .age-card__category {
+      background: linear-gradient(90deg, #7c1010, #ac2222, #7c1010);
+    }
+    .age-card--no .age-card__bottom {
+      background: linear-gradient(to top, #1e0202, #4c0808);
+    }
+
+    /* ═══════════════════════════════════════════
+       OVERLAY DE CONFIRMATION
+    ═══════════════════════════════════════════ */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.4s ease, visibility 0.4s;
+    }
+    .overlay.is-active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* Carte de confirmation (parchemin) */
+    .confirm-card {
+      position: relative;
+      background:
+        radial-gradient(ellipse 30% 25% at 25% 30%, rgba(180,130,50,0.22) 0%, transparent 50%),
+        linear-gradient(145deg, #f5e8cc 0%, #dfc890 100%);
+      border: 2px solid var(--gold);
+      border-radius: 8px;
+      padding: 2.5rem 3rem;
+      text-align: center;
+      max-width: 440px;
+      width: 90%;
+      box-shadow:
+        0 0 0 1px  rgba(201,162,39,0.28),
+        0 0 0 5px  rgba(201,162,39,0.07),
+        0 0 0 6px  rgba(201,162,39,0.42),
+        0 0 80px   rgba(0,0,0,0.95);
+      transform: scale(0.55) translateY(24px);
+      transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .overlay.is-active .confirm-card {
+      transform: scale(1) translateY(0);
+    }
+
+    .confirm-card__corner {
+      position: absolute;
+      color: var(--gold);
+      font-size: 0.82rem;
+    }
+    .confirm-card__corner--tl { top: 7px;    left: 9px;  }
+    .confirm-card__corner--tr { top: 7px;    right: 9px; }
+    .confirm-card__corner--bl { bottom: 7px; left: 9px;  }
+    .confirm-card__corner--br { bottom: 7px; right: 9px; }
+
+    .confirm-card__icon {
+      display: block;
+      font-size: 3.5rem;
+      margin-bottom: 1rem;
+    }
+    .confirm-card__title {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 1.28rem;
+      font-weight: 700;
+      color: var(--gold-dark);
+      margin-bottom: 0.6rem;
+    }
+    .confirm-card__msg {
+      font-size: 0.95rem;
+      color: var(--parchment-txt);
+      line-height: 1.65;
+    }
+    .confirm-card__error {
+      display: none;
+      margin-top: 0.7rem;
+      font-size: 0.8rem;
+      color: #8a1010;
+      font-style: italic;
+    }
+    .confirm-card__close {
+      display: inline-block;
+      margin-top: 1.4rem;
+      padding: 0.45rem 1.5rem;
+      background: var(--gold-dark);
+      color: var(--gold-light);
+      border: 1px solid var(--gold);
+      border-radius: 4px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.76rem;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.2s, color 0.2s;
+    }
+    .confirm-card__close:hover {
+      background: var(--gold);
+      color: #1a0800;
+    }
+
+    /* ═══════════════════════════════════════════
+       TOUCH — annuler le hover sur écran tactile
+       (évite les états « bloqués » après un tap)
+    ═══════════════════════════════════════════ */
+    @media (hover: none) {
+      .age-card:hover {
+        transform: none;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.8), 0 0 0 1px rgba(201,162,39,0.35);
+        border-color: var(--gold);
+        z-index: auto;
+      }
+      .age-card:hover::before          { opacity: 0; }
+      .age-card:hover .age-card__icon  { transform: none; }
+      /* Retour visuel immédiat au tap */
+      .age-card:active {
+        transform: scale(0.94);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.8), 0 0 0 2px var(--gold);
+        transition-duration: 0.08s;
+      }
+    }
+
+    /* ═══════════════════════════════════════════
+       RESPONSIVE — MOBILE (≤ 560 px)
+
+       Objectif : les 3 cartes restent TOUJOURS
+       côte à côte, même sur iPhone SE (375 px).
+
+       Solution : basculer les cartes en flex-column
+       fluide (width = 1/3 de la zone dispo,
+       hauteur pilotée par aspect-ratio 2/3).
+       Les enfants en position:absolute deviennent
+       des flex-items dans ce contexte.
+    ═══════════════════════════════════════════ */
+    @media (max-width: 560px) {
+      body {
+        padding: 1.2rem 0.8rem;
+        padding-bottom: max(1.2rem, env(safe-area-inset-bottom));
+        align-items: flex-start; /* scroll vertical si contenu haut */
+      }
+
+      /* Les ornements de coin empiètent sur le contenu à ce format */
+      .page-corner { display: none; }
+
+      .container { gap: 1.3rem; }
+
+      .wonder-board__header  { padding: 0.9rem 1.2rem; }
+      .wonder-board__body    { padding: 1.2rem 1rem; }
+      .wonder-board__tagline { font-size: 0.75rem; }
+
+      .divider      { gap: 0.5rem; }
+      .divider__text { font-size: 0.66rem; letter-spacing: 0.03em; }
+
+      /* ── Cartes ──────────────────────────────────────────
+         On remplace le layout position:absolute figé
+         par un flex-column dont la hauteur découle de
+         aspect-ratio. Les 3 cartes tiennent en ligne
+         dès 320 px de viewport.
+      ─────────────────────────────────────────────────── */
+      .cards-row { gap: 0.55rem; }
+
+      .age-card {
+        width: calc((100% - 1.1rem) / 3); /* 1.1rem = 2 × gap 0.55rem */
+        height: auto;
+        aspect-ratio: 2 / 3;
+        display: flex;
+        flex-direction: column;
+        transform: none; /* pas de 3D sur tactile */
+      }
+
+      /* Les enfants absolus deviennent des flex-items */
+      .age-card__category {
+        position: static;
+        flex-shrink: 0;
+        font-size: 0.44rem;
+        padding: 5px 4px;
+        letter-spacing: 0.07em;
+      }
+      .age-card__icon-area {
+        position: static;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .age-card__icon              { font-size: 2.2rem; }
+      .age-card:hover .age-card__icon { transform: none; }
+
+      .age-card__bottom {
+        position: static;
+        flex-shrink: 0;
+        padding: 7px 4px 6px;
+      }
+      .age-card__name  { font-size: 0.68rem; letter-spacing: 0.04em; }
+      .age-card__label { font-size: 0.5rem;  margin-top: 2px; }
+
+      /* Cadre intérieur masqué (illisible à ce gabarit) */
+      .age-card__frame { display: none; }
+
+      /* Overlay de confirmation */
+      .confirm-card        { padding: 1.8rem 1.2rem; }
+      .confirm-card__title { font-size: 1.1rem; }
+      .confirm-card__msg   { font-size: 0.88rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ornements dorés aux coins de la page -->
+  <span class="page-corner page-corner--tl" aria-hidden="true">✦</span>
+  <span class="page-corner page-corner--tr" aria-hidden="true">✦</span>
+  <span class="page-corner page-corner--bl" aria-hidden="true">✦</span>
+  <span class="page-corner page-corner--br" aria-hidden="true">✦</span>
+
+  <main class="container">
+
+    <!-- ══════════════════════════════════════
+         WONDER BOARD — plateau de merveille
+    ══════════════════════════════════════ -->
+    <article class="wonder-board" aria-label="Invitation EVG Cedo">
+      <span class="wonder-board__corner wonder-board__corner--tl" aria-hidden="true">◆</span>
+      <span class="wonder-board__corner wonder-board__corner--tr" aria-hidden="true">◆</span>
+      <span class="wonder-board__corner wonder-board__corner--bl" aria-hidden="true">◆</span>
+      <span class="wonder-board__corner wonder-board__corner--br" aria-hidden="true">◆</span>
+
+      <header class="wonder-board__header">
+        <h1 class="wonder-board__title">L'EVG de Cedo</h1>
+        <p class="wonder-board__eyebrow">— Invitation Officielle —</p>
+      </header>
+
+      <div class="wonder-board__body">
+        <div class="info-grid">
+          <div class="info-row">
+            <span class="info-row__icon" aria-hidden="true">📅</span>
+            <span>Le <strong>[DATE]</strong></span>
+          </div>
+          <div class="info-row">
+            <span class="info-row__icon" aria-hidden="true">📍</span>
+            <span><strong>[LIEU]</strong></span>
+          </div>
+        </div>
+        <p class="wonder-board__tagline">Serez-vous au rendez-vous de l'aventure&nbsp;?</p>
+      </div>
+    </article>
+
+    <!-- Séparateur -->
+    <div class="divider" aria-hidden="true">
+      <span class="divider__text">✦ Choisissez votre destinée ✦</span>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         CARTES DE RÉPONSE
+    ══════════════════════════════════════ -->
+    <div class="cards-row" role="group" aria-label="Réponse à l'invitation">
+
+      <!-- OUI — Guilde des Aventuriers (violet) -->
+      <button class="age-card age-card--yes"
+              aria-label="Oui, je serai là"
+              onclick="sendVote('oui')">
+        <div  class="age-card__frame"       aria-hidden="true"></div>
+        <div  class="age-card__category"    aria-hidden="true">Guilde des Aventuriers</div>
+        <div  class="age-card__icon-area">
+          <span class="age-card__icon"      aria-hidden="true">⚜️</span>
+        </div>
+        <div class="age-card__bottom">
+          <span class="age-card__name">OUI</span>
+          <span class="age-card__label">Je serai là !</span>
+        </div>
+      </button>
+
+      <!-- PEUT-ÊTRE — Comptoir Marchand (ambre) -->
+      <button class="age-card age-card--maybe"
+              aria-label="Peut-être présent"
+              onclick="sendVote('maybe')">
+        <div  class="age-card__frame"       aria-hidden="true"></div>
+        <div  class="age-card__category"    aria-hidden="true">Comptoir Marchand</div>
+        <div  class="age-card__icon-area">
+          <span class="age-card__icon"      aria-hidden="true">⚖️</span>
+        </div>
+        <div class="age-card__bottom">
+          <span class="age-card__name">PEUT-ÊTRE</span>
+          <span class="age-card__label">Je verrai…</span>
+        </div>
+      </button>
+
+      <!-- NON — Légion de Fer (cramoisi) -->
+      <button class="age-card age-card--no"
+              aria-label="Non, je ne pourrai pas venir"
+              onclick="sendVote('non')">
+        <div  class="age-card__frame"       aria-hidden="true"></div>
+        <div  class="age-card__category"    aria-hidden="true">Légion de Fer</div>
+        <div  class="age-card__icon-area">
+          <span class="age-card__icon"      aria-hidden="true">⚔️</span>
+        </div>
+        <div class="age-card__bottom">
+          <span class="age-card__name">NON</span>
+          <span class="age-card__label">Je ne peux pas</span>
+        </div>
+      </button>
+
+    </div>
+  </main>
+
+  <!-- ══════════════════════════════════════
+       OVERLAY DE CONFIRMATION
+  ══════════════════════════════════════ -->
+  <div id="overlay" class="overlay"
+       role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="confirm-card">
+      <span class="confirm-card__corner confirm-card__corner--tl" aria-hidden="true">◆</span>
+      <span class="confirm-card__corner confirm-card__corner--tr" aria-hidden="true">◆</span>
+      <span class="confirm-card__corner confirm-card__corner--bl" aria-hidden="true">◆</span>
+      <span class="confirm-card__corner confirm-card__corner--br" aria-hidden="true">◆</span>
+
+      <span id="confirmIcon"  class="confirm-card__icon"  aria-hidden="true"></span>
+      <h2   id="confirmTitle" class="confirm-card__title"></h2>
+      <p    id="confirmMsg"   class="confirm-card__msg"></p>
+      <p    id="confirmErr"   class="confirm-card__error"></p>
+
+      <button class="confirm-card__close" onclick="closeOverlay()">Fermer ✕</button>
+    </div>
+  </div>
+
+  <script>
+    /* ================================================================
+       CONFIGURATION — à compléter avant mise en production
+       ================================================================ */
+
+    const POLL_BASE = 'https://api.pollsapi.com/v1';
+    const POLL_ID   = 'EVG-CEDO';
+
+    // TODO : récupérer les IDs réels via GET /v1/get/poll/EVG-CEDO
+    //        et remplacer les valeurs ci-dessous.
+    const OPTION_IDS = {
+      oui:   'OPTION_ID_OUI',
+      maybe: 'OPTION_ID_MAYBE',
+      non:   'OPTION_ID_NON',
+    };
+
+    // TODO : ne jamais exposer la clé en dur côté client en production ;
+    //        préférer un proxy serveur ou une URL signée.
+    const API_KEY = 'VOTRE_API_KEY';
+
+    /* ================================================================
+       TEXTES DE CONFIRMATION
+       ================================================================ */
+    const CONFIRM = {
+      oui: {
+        icon:  '⚜️',
+        title: 'Excellent choix, Aventurier !',
+        msg:   'Ta présence est confirmée. Prépare-toi pour une épopée mémorable !',
+      },
+      maybe: {
+        icon:  '⚖️',
+        title: 'Le sort en est jeté…',
+        msg:   "Ta réponse a bien été enregistrée. L'oracle te contactera.",
+      },
+      non: {
+        icon:  '💀',
+        title: 'Tu manqueras à la guilde',
+        msg:   "Ton absence est notée. Que tu sois pardonné par les dieux du plateau.",
+      },
+    };
+
+    /* ================================================================
+       ENVOI DU VOTE
+       ================================================================ */
+    async function sendVote(choice) {
+      // Désactiver les boutons (empêche le double-vote)
+      document.querySelectorAll('.age-card').forEach(btn => {
+        btn.disabled = true;
+      });
+
+      // Afficher l'overlay de confirmation immédiatement
+      const c = CONFIRM[choice];
+      document.getElementById('confirmIcon').textContent  = c.icon;
+      document.getElementById('confirmTitle').textContent = c.title;
+      document.getElementById('confirmMsg').textContent   = c.msg;
+      document.getElementById('confirmErr').style.display = 'none';
+      document.getElementById('overlay').classList.add('is-active');
+      document.body.style.overflow = 'hidden'; // empêche le scroll derrière l'overlay
+
+      try {
+        // TODO : vérifier l'endpoint et le corps exacts attendus par pollsapi.com.
+        //        Exemple à adapter :
+        const res = await fetch(`${POLL_BASE}/create/pollvote`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'api-key': API_KEY,
+          },
+          body: JSON.stringify({
+            identifier: POLL_ID,
+            option_id:  OPTION_IDS[choice],
+            // TODO : ajouter d'autres champs requis par l'API si nécessaire
+          }),
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        // const data = await res.json();
+        // console.log('Vote enregistré :', data);
+
+      } catch (err) {
+        console.error("Échec de l'envoi du vote :", err);
+        const errEl = document.getElementById('confirmErr');
+        errEl.textContent = "⚠ Erreur réseau — ton vote n'a peut-être pas été enregistré.";
+        errEl.style.display = 'block';
+      }
+    }
+
+    /* ================================================================
+       FERMETURE DE L'OVERLAY
+       ================================================================ */
+    function closeOverlay() {
+      document.getElementById('overlay').classList.remove('is-active');
+      document.body.style.overflow = ''; // restaure le scroll
+    }
+
+    // Clic sur le fond de l'overlay pour fermer
+    document.getElementById('overlay').addEventListener('click', function (e) {
+      if (e.target === this) closeOverlay();
+    });
+  </script>
+</body>
+</html>

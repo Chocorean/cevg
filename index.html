@@ -551,23 +551,20 @@
     /* ═══════════════════════════════════════════
        RESPONSIVE — MOBILE (≤ 560 px)
 
-       Objectif : les 3 cartes restent TOUJOURS
-       côte à côte, même sur iPhone SE (375 px).
+       Les 3 boutons s'empilent verticalement
+       en cartes paysage pleine largeur.
 
-       Solution : basculer les cartes en flex-column
-       fluide (width = 1/3 de la zone dispo,
-       hauteur pilotée par aspect-ratio 2/3).
-       Les enfants en position:absolute deviennent
-       des flex-items dans ce contexte.
+       Layout grille par carte :
+         [ bannière catégorie — pleine largeur ]
+         [ icône | 80px ]  [ OUI / texte | 1fr ]
     ═══════════════════════════════════════════ */
     @media (max-width: 560px) {
       body {
         padding: 1.2rem 0.8rem;
         padding-bottom: max(1.2rem, env(safe-area-inset-bottom));
-        align-items: flex-start; /* scroll vertical si contenu haut */
+        align-items: flex-start;
       }
 
-      /* Les ornements de coin empiètent sur le contenu à ce format */
       .page-corner { display: none; }
 
       .container { gap: 1.3rem; }
@@ -576,53 +573,72 @@
       .wonder-board__body    { padding: 1.2rem 1rem; }
       .wonder-board__tagline { font-size: 0.75rem; }
 
-      .divider      { gap: 0.5rem; }
+      .divider       { gap: 0.5rem; }
       .divider__text { font-size: 0.66rem; letter-spacing: 0.03em; }
 
-      /* ── Cartes ──────────────────────────────────────────
-         On remplace le layout position:absolute figé
-         par un flex-column dont la hauteur découle de
-         aspect-ratio. Les 3 cartes tiennent en ligne
-         dès 320 px de viewport.
-      ─────────────────────────────────────────────────── */
-      .cards-row { gap: 0.55rem; }
+      /* ── Cartes : empilement vertical, orientation paysage ─────
+         grid-template-columns: 80px (icône) | 1fr (texte)
+         grid-template-rows:    auto (bannière) | 1fr (contenu)
+      ──────────────────────────────────────────────────────────── */
+      .cards-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.9rem;
+      }
 
       .age-card {
-        width: calc((100% - 1.1rem) / 3); /* 1.1rem = 2 × gap 0.55rem */
+        width: 100%;
         height: auto;
-        aspect-ratio: 2 / 3;
-        display: flex;
-        flex-direction: column;
-        transform: none; /* pas de 3D sur tactile */
+        min-height: 130px;
+        display: grid;
+        grid-template-columns: 100px 1fr;
+        grid-template-rows: auto 1fr;
+        aspect-ratio: unset;
+        transform: none;
       }
 
-      /* Les enfants absolus deviennent des flex-items */
+      /* Bannière catégorie — s'étend sur les 2 colonnes */
       .age-card__category {
         position: static;
-        flex-shrink: 0;
-        font-size: 0.44rem;
-        padding: 5px 4px;
-        letter-spacing: 0.07em;
+        grid-column: 1 / -1;
+        grid-row: 1;
+        font-size: 0.58rem;
+        padding: 7px 14px;
+        letter-spacing: 0.13em;
+        text-align: center;
       }
+
+      /* Icône — colonne gauche, séparée par un filet doré */
       .age-card__icon-area {
         position: static;
-        flex: 1;
+        grid-column: 1;
+        grid-row: 2;
         display: flex;
         align-items: center;
         justify-content: center;
+        padding: 14px 10px;
+        border-right: 1px solid rgba(201, 162, 39, 0.3);
       }
-      .age-card__icon              { font-size: 2.2rem; }
+      .age-card__icon              { font-size: 3.4rem; }
       .age-card:hover .age-card__icon { transform: none; }
 
+      /* Nom + tagline — colonne droite */
       .age-card__bottom {
         position: static;
-        flex-shrink: 0;
-        padding: 7px 4px 6px;
+        grid-column: 2;
+        grid-row: 2;
+        border-top: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 14px 22px;
+        text-align: left;
       }
-      .age-card__name  { font-size: 0.68rem; letter-spacing: 0.04em; }
-      .age-card__label { font-size: 0.5rem;  margin-top: 2px; }
+      .age-card__name  { font-size: 1.35rem; letter-spacing: 0.06em; }
+      .age-card__label { font-size: 0.75rem;  margin-top: 6px; letter-spacing: 0.08em; }
 
-      /* Cadre intérieur masqué (illisible à ce gabarit) */
+      /* Cadre intérieur : incompatible avec le layout grille */
       .age-card__frame { display: none; }
 
       /* Overlay de confirmation */

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EVG Cedo — Tableau des votes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg: #08120a;
+        --gold: #c9a227;
+        --gold-light: #f0d060;
+        --parchment: #f5e8cc;
+        --parchment-mid: #dfc894;
+        --board-ink: #1d1203;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 2rem 1rem;
+        font-family: 'Cinzel', serif;
+        color: var(--board-ink);
+        background:
+          radial-gradient(ellipse 110% 110% at 50% 50%, rgba(12, 28, 15, 0.1) 0%, rgba(4, 8, 5, 0.96) 100%),
+          linear-gradient(180deg, #0b170f, #070d09);
+      }
+
+      .panel {
+        width: min(900px, 100%);
+        background: linear-gradient(155deg, #f5e8cc 0%, #ead5a2 35%, #dfc890 65%, #d4b878 100%);
+        border: 2px solid var(--gold);
+        border-radius: 12px;
+        box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.25), 0 0 0 6px rgba(201, 162, 39, 0.38), 0 32px 90px rgba(0,0,0,0.75);
+        overflow: hidden;
+      }
+
+      .panel__header {
+        padding: 1.2rem 1.5rem;
+        text-align: center;
+        background: linear-gradient(90deg, #071510 0%, #102818 15%, #194030 50%, #102818 85%, #071510 100%);
+        border-bottom: 2px solid var(--gold);
+      }
+
+      .panel__title {
+        margin: 0;
+        font-family: 'Cinzel Decorative', serif;
+        font-size: clamp(1.5rem, 4vw, 2.4rem);
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        color: var(--gold-light);
+      }
+
+      .panel__body {
+        padding: 1.25rem;
+      }
+
+      .panel__meta {
+        margin: 0 0 1rem;
+        text-align: center;
+        color: rgba(26, 18, 3, 0.82);
+        font-size: 0.8rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border: 1px solid rgba(122, 96, 16, 0.7);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 380px;
+      }
+
+      thead {
+        background: linear-gradient(90deg, rgba(18, 40, 32, 0.92), rgba(17, 22, 25, 0.92));
+      }
+
+      th, td {
+        padding: 0.9rem 1rem;
+        text-align: left;
+        border-bottom: 1px solid rgba(122, 96, 16, 0.35);
+      }
+
+      th {
+        color: var(--gold-light);
+        font-size: 0.7rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      td {
+        color: #201507;
+        background: rgba(255,255,255,0.04);
+      }
+
+      tbody tr:nth-child(even) td {
+        background: rgba(255,255,255,0.08);
+      }
+
+      .status {
+        margin-top: 1rem;
+        min-height: 1.5rem;
+        text-align: center;
+        font-size: 0.85rem;
+        letter-spacing: 0.06em;
+      }
+
+      .actions {
+        margin-top: 1.25rem;
+        text-align: center;
+      }
+
+      .actions a {
+        display: inline-block;
+        padding: 0.7rem 1.1rem;
+        border-radius: 999px;
+        border: 1px solid rgba(122, 96, 16, 0.8);
+        background: rgba(15, 26, 18, 0.8);
+        color: var(--gold-light);
+        text-decoration: none;
+        font-size: 0.8rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      @media (max-width: 560px) {
+        .panel__body { padding: 1rem; }
+        th, td { padding: 0.75rem 0.7rem; }
+        th { letter-spacing: 0.1em; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="panel" aria-labelledby="pollTitle">
+      <header class="panel__header">
+        <h1 id="pollTitle" class="panel__title">Table des votes</h1>
+      </header>
+
+      <div class="panel__body">
+        <p class="panel__meta">EVG Cedo — participants</p>
+
+        <div class="table-wrap">
+          <table aria-live="polite">
+            <thead>
+              <tr>
+                <th scope="col">Person</th>
+                <th scope="col">Vote</th>
+              </tr>
+            </thead>
+            <tbody id="votesTableBody"></tbody>
+          </table>
+        </div>
+
+        <p id="status" class="status" aria-live="polite"></p>
+
+        <div class="actions">
+          <a href="./index.html">Retour au formulaire</a>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const POLL_BASE = 'https://api.pollsapi.com/v1';
+      const POLL_IDENTIFIER = 'EVG-CEDO';
+      const API_KEY = 'RZ9JFXD58DM9F9G0378VBBGE656N';
+
+      const VOTE_LABELS = {
+        yes: 'Oui',
+        maybe: 'Peut-être',
+        no: 'Non',
+      };
+
+      function escapeHtml(value) {
+        return String(value ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/\"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function normalizeChoice(value) {
+        const text = String(value ?? '').trim().toLowerCase();
+        if (['oui', 'yes'].includes(text)) return 'yes';
+        if (['peut-être', 'peut etre', 'maybe'].includes(text)) return 'maybe';
+        if (['non', 'no'].includes(text)) return 'no';
+        return null;
+      }
+
+      function buildOptionMap(pollDoc) {
+        const map = {};
+        const options = Array.isArray(pollDoc?.options) ? pollDoc.options : [];
+
+        for (const option of options) {
+          const rawText = option?.text ?? option?.label ?? option?.name ?? option?.value ?? '';
+          const normalized = normalizeChoice(rawText);
+          if (!normalized) continue;
+
+          const optionId = String(option?.option_id ?? option?.id ?? option?._id ?? '');
+          if (!optionId) continue;
+
+          map[optionId] = VOTE_LABELS[normalized];
+        }
+
+        return map;
+      }
+
+      async function loadPollAndVotes() {
+        const statusEl = document.getElementById('status');
+        const tableBody = document.getElementById('votesTableBody');
+
+        try {
+          const pollRes = await fetch(`${POLL_BASE}/get/polls-with-identifier/${encodeURIComponent(POLL_IDENTIFIER)}`, {
+            headers: {
+              'Accept': 'application/json',
+              'api-key': API_KEY,
+            },
+          });
+
+          if (!pollRes.ok) {
+            throw new Error(`HTTP ${pollRes.status}`);
+          }
+
+          const pollPayload = await pollRes.json();
+          const pollDoc = pollPayload?.data?.docs?.[0] ?? null;
+          if (!pollDoc) {
+            throw new Error('Aucun sondage trouvé pour cette liste.');
+          }
+
+          const pollId = String(pollDoc.id ?? pollDoc.poll_id ?? pollDoc._id ?? '');
+          if (!pollId) {
+            throw new Error('Aucun identifiant de sondage trouvé.');
+          }
+
+          const votesRes = await fetch(`${POLL_BASE}/get/votes/${encodeURIComponent(pollId)}?offset=0&limit=100`, {
+            headers: {
+              'Accept': 'application/json',
+              'api-key': API_KEY,
+            },
+          });
+
+          if (!votesRes.ok) {
+            throw new Error(`HTTP ${votesRes.status}`);
+          }
+
+          const votesPayload = await votesRes.json();
+          const votes = Array.isArray(votesPayload?.data?.docs) ? votesPayload.data.docs : [];
+          const optionMap = buildOptionMap(pollDoc);
+
+          if (!votes.length) {
+            tableBody.innerHTML = '<tr><td colspan="2">Aucune réponse enregistrée.</td></tr>';
+            statusEl.textContent = 'Le sondage n’a reçu aucune réponse pour l’instant.';
+            return;
+          }
+
+          tableBody.innerHTML = votes
+            .map((vote) => {
+              const person = vote?.identifier ?? '—';
+              const optionId = String(vote?.option_id ?? '');
+              const voteLabel = optionMap[optionId] ?? 'Inconnu';
+              return `<tr><td>${escapeHtml(person)}</td><td>${escapeHtml(voteLabel)}</td></tr>`;
+            })
+            .join('');
+
+          statusEl.textContent = `${votes.length} vote${votes.length > 1 ? 's' : ''} enregistré${votes.length > 1 ? 's' : ''}.`;
+        } catch (error) {
+          console.error('Erreur lors du chargement du tableau des votes:', error);
+          tableBody.innerHTML = '<tr><td colspan="2">Impossible de charger les votes.</td></tr>';
+          if (statusEl) {
+            statusEl.textContent = 'Le tableau des votes est indisponible pour le moment.';
+          }
+        }
+      }
+
+      loadPollAndVotes();
+    </script>
+  </body>
+</html>

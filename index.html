@@ -357,6 +357,30 @@
       box-shadow: none !important;
     }
 
+    .age-card.is-selected {
+      border-color: var(--gold-light);
+      box-shadow:
+        0 0 0 2px rgba(255,255,255,0.22),
+        0 18px 40px rgba(0,0,0,0.84),
+        0 0 22px rgba(201,162,39,0.36);
+      filter: saturate(1.08) brightness(1.08);
+    }
+
+    .vote-status {
+      width: 100%;
+      max-width: 460px;
+      margin: 0 auto;
+      padding: 0.8rem 1rem;
+      border: 1px solid rgba(201,162,39,0.5);
+      border-radius: 999px;
+      background: rgba(10, 17, 13, 0.68);
+      color: #f8dd98;
+      text-align: center;
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
     /* Reflet de lumière sur la carte au survol */
     .age-card::before {
       content: '';
@@ -794,6 +818,8 @@
       <span class="divider__text">✦ Choisissez votre destinée ✦</span>
     </div>
 
+    <p id="voteStatus" class="vote-status" aria-live="polite" hidden></p>
+
     <!-- ══════════════════════════════════════
          CARTES DE RÉPONSE
     ══════════════════════════════════════ -->
@@ -801,8 +827,9 @@
 
       <!-- OUI — Guilde des Aventuriers (violet) -->
       <button class="age-card age-card--yes"
+              data-vote-key="yes"
               aria-label="Oui, je serai là"
-              onclick="sendVote('oui')">
+              onclick="sendVote('yes')">
         <div  class="age-card__frame"       aria-hidden="true"></div>
         <div  class="age-card__category"    aria-hidden="true">Guilde des Aventuriers</div>
         <div  class="age-card__icon-area">
@@ -816,6 +843,7 @@
 
       <!-- PEUT-ÊTRE — Comptoir Marchand (ambre) -->
       <button class="age-card age-card--maybe"
+              data-vote-key="maybe"
               aria-label="Peut-être présent"
               onclick="sendVote('maybe')">
         <div  class="age-card__frame"       aria-hidden="true"></div>
@@ -831,8 +859,9 @@
 
       <!-- NON — Légion de Fer (cramoisi) -->
       <button class="age-card age-card--no"
+              data-vote-key="no"
               aria-label="Non, je ne pourrai pas venir"
-              onclick="sendVote('non')">
+              onclick="sendVote('no')">
         <div  class="age-card__frame"       aria-hidden="true"></div>
         <div  class="age-card__category"    aria-hidden="true">Légion de Fer</div>
         <div  class="age-card__icon-area">
@@ -868,55 +897,64 @@
   </div>
 
   <script>
-    /* ================================================================
-       CONFIGURATION — à compléter avant mise en production
-       ================================================================ */
-
     const POLL_BASE = 'https://api.pollsapi.com/v1';
-    const POLL_ID   = 'EVG-CEDO';
+    const POLL_IDENTIFIER = 'EVG-CEDO';
+    const API_KEY = 'RZ9JFXD58DM9F9G0378VBBGE656N';
 
-    // TODO : récupérer les IDs réels via GET /v1/get/poll/EVG-CEDO
-    //        et remplacer les valeurs ci-dessous.
-    const OPTION_IDS = {
-      oui:   'OPTION_ID_OUI',
-      maybe: 'OPTION_ID_MAYBE',
-      non:   'OPTION_ID_NON',
+    let POLL_ID = null;
+    let OPTION_IDS = {};
+    let CURRENT_VOTE = null;
+
+    const VOTE_LABELS = {
+      yes: 'Oui',
+      maybe: 'Peut-être',
+      no: 'Non',
     };
 
-    // TODO : ne jamais exposer la clé en dur côté client en production ;
-    //        préférer un proxy serveur ou une URL signée.
-    const API_KEY = 'VOTRE_API_KEY';
-
-    /* ================================================================
-       TEXTES DE CONFIRMATION
-       ================================================================ */
     const CONFIRM = {
-      oui: {
-        icon:  '⚜️',
+      yes: {
+        icon: '⚜️',
         title: 'Excellent choix, Aventurier !',
-        msg:   'Ta présence est confirmée. Prépare-toi pour une épopée mémorable !',
+        msg: 'Ta présence est confirmée. Prépare-toi pour une épopée mémorable !',
       },
       maybe: {
-        icon:  '⚖️',
+        icon: '⚖️',
         title: 'Le sort en est jeté…',
-        msg:   "Ta réponse a bien été enregistrée. L'oracle te contactera.",
+        msg: "Ta réponse a bien été enregistrée. L'oracle te contactera.",
       },
-      non: {
-        icon:  '💀',
+      no: {
+        icon: '💀',
         title: 'Tu manqueras à la guilde',
-        msg:   "Ton absence est notée. Que tu sois pardonné par les dieux du plateau.",
+        msg: "Ton absence est notée. Que tu sois pardonné par les dieux du plateau.",
       },
     };
 
-    /* ================================================================
-       PERSONNALISATION — nom via query param ?name=
-       ================================================================ */
-    function getInviteeNameFromQuery() {
+    function normalizePollChoice(value) {
+      const text = String(value ?? '').trim().toLowerCase();
+      if (['oui', 'yes'].includes(text)) return 'yes';
+      if (['peut-être', 'peut etre', 'maybe'].includes(text)) return 'maybe';
+      if (['non', 'no'].includes(text)) return 'no';
+      return text;
+    }
+
+    function getRawNameFromQuery() {
       const params = new URLSearchParams(window.location.search);
-      const rawName = (params.get('name') || '').trim().replace(/\s+/g, ' ');
-      const interName = rawName.slice(0, 60) || 'aventurier';
-      const capName = interName.charAt(0).toUpperCase() + interName.slice(1);
-      return "Noble " + capName;
+      return (params.get('name') || '').trim().replace(/\s+/g, ' ');
+    }
+
+    function getDisplayNameFromQuery() {
+      const rawName = getRawNameFromQuery();
+      if (!rawName) return 'aventurier';
+      return rawName
+        .split(/\s+/)
+        .filter(Boolean)
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+    }
+
+    function getInviteeNameFromQuery() {
+      const displayName = getDisplayNameFromQuery();
+      return displayName ? `Noble ${displayName}` : 'Noble aventurier';
     }
 
     function applyInviteeName() {
@@ -925,69 +963,241 @@
       inviteeNameEl.textContent = getInviteeNameFromQuery();
     }
 
-    applyInviteeName();
+    function voteLabelForChoice(choice) {
+      return VOTE_LABELS[choice] || choice;
+    }
 
-    /* ================================================================
-       ENVOI DU VOTE
-       ================================================================ */
-    async function sendVote(choice) {
-      // Désactiver les boutons (empêche le double-vote)
-      document.querySelectorAll('.age-card').forEach(btn => {
+    function showVoteStatus(choice) {
+      const statusEl = document.getElementById('voteStatus');
+      if (!statusEl) return;
+      statusEl.hidden = false;
+      statusEl.textContent = `Votre réponse est enregistrée : ${voteLabelForChoice(choice)}.`;
+    }
+
+    function setAllButtonsLocked(selectedChoice = null) {
+      document.querySelectorAll('.age-card').forEach((btn) => {
         btn.disabled = true;
+        btn.classList.toggle('is-selected', btn.dataset.voteKey === selectedChoice);
+      });
+    }
+
+    function setAllButtonsUnlocked() {
+      document.querySelectorAll('.age-card').forEach((btn) => {
+        btn.disabled = false;
+        btn.classList.remove('is-selected');
+      });
+    }
+
+    function extractChoiceFromVote(vote) {
+      if (!vote || typeof vote !== 'object') return null;
+
+      const optionObj = vote.option;
+      if (optionObj && typeof optionObj === 'object') {
+        const optionText = optionObj.text ?? optionObj.label ?? optionObj.name ?? optionObj.value;
+        const normalized = normalizePollChoice(optionText);
+        if (normalized && ['yes', 'maybe', 'no'].includes(normalized)) {
+          return normalized;
+        }
+      }
+
+      if (typeof vote.option === 'string') {
+        const normalized = normalizePollChoice(vote.option);
+        if (normalized && ['yes', 'maybe', 'no'].includes(normalized)) {
+          return normalized;
+        }
+      }
+
+      const optionId = vote.option_id ?? optionObj?.option_id ?? optionObj?.id ?? optionObj?._id;
+      if (optionId) {
+        const match = Object.entries(OPTION_IDS).find(([, id]) => String(id) === String(optionId));
+        if (match) return match[0];
+      }
+
+      return null;
+    }
+
+    async function loadPollConfig() {
+      const url = `${POLL_BASE}/get/polls-with-identifier/${encodeURIComponent(POLL_IDENTIFIER)}`;
+      const res = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'api-key': API_KEY,
+        },
       });
 
-      // Afficher l'overlay de confirmation immédiatement
-      const c = CONFIRM[choice];
-      document.getElementById('confirmIcon').textContent  = c.icon;
-      document.getElementById('confirmTitle').textContent = c.title;
-      document.getElementById('confirmMsg').textContent   = c.msg;
-      document.getElementById('confirmErr').style.display = 'none';
-      document.getElementById('overlay').classList.add('is-active');
-      document.body.style.overflow = 'hidden'; // empêche le scroll derrière l'overlay
+      if (!res.ok) {
+        throw new Error(`Impossible de charger le sondage (${res.status}).`);
+      }
+
+      const payload = await res.json();
+      const pollDoc = payload?.data?.docs?.[0] ?? payload?.poll ?? payload?.data?.poll ?? payload?.data?.doc ?? null;
+
+      if (!pollDoc) {
+        throw new Error('Aucun sondage trouvé pour cette liste.');
+      }
+
+      POLL_ID = String(pollDoc.poll_id ?? pollDoc.id ?? pollDoc._id ?? '');
+      if (!POLL_ID) {
+        throw new Error('Le sondage a été trouvé mais son identifiant est absent.');
+      }
+
+      OPTION_IDS = {};
+      for (const option of Array.isArray(pollDoc.options) ? pollDoc.options : []) {
+        const optionText = normalizePollChoice(option?.text ?? option?.label ?? option?.name ?? option?.value);
+        const optionId = option?.option_id ?? option?.id ?? option?._id;
+        if (optionText && optionId && ['yes', 'maybe', 'no'].includes(optionText)) {
+          OPTION_IDS[optionText] = String(optionId);
+        }
+      }
+
+      if (Object.keys(OPTION_IDS).length !== 3) {
+        throw new Error('Les options du sondage sont incomplètes.');
+      }
+    }
+
+    async function checkExistingVote() {
+      const rawName = getRawNameFromQuery();
+      if (!rawName) return false;
+      if (!POLL_ID) {
+        await loadPollConfig();
+      }
+
+      const url = `${POLL_BASE}/get/votes-with-identifier/${encodeURIComponent(rawName)}?offset=0&limit=100`;
+      const res = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'api-key': API_KEY,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(`Impossible de vérifier votre vote (${res.status}).`);
+      }
+
+      const payload = await res.json();
+      const votes = Array.isArray(payload?.data?.docs) ? payload.data.docs : [];
+
+      for (const vote of votes) {
+        const votePollId = vote?.poll_id ?? vote?.poll?.poll_id ?? vote?.poll?.id ?? vote?.poll?._id ?? null;
+        if (String(votePollId) !== String(POLL_ID)) continue;
+
+        const voteChoice = extractChoiceFromVote(vote);
+        if (voteChoice) {
+          CURRENT_VOTE = voteChoice;
+          setAllButtonsLocked(voteChoice);
+          showVoteStatus(voteChoice);
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    async function initializePage() {
+      applyInviteeName();
+      const statusEl = document.getElementById('voteStatus');
 
       try {
-        // TODO : vérifier l'endpoint et le corps exacts attendus par pollsapi.com.
-        //        Exemple à adapter :
-        const res = await fetch(`${POLL_BASE}/create/pollvote`, {
+        await loadPollConfig();
+
+        const rawName = getRawNameFromQuery();
+        if (!rawName) {
+          if (statusEl) {
+            statusEl.hidden = false;
+            statusEl.textContent = 'Ajoutez ?name=... pour enregistrer votre réponse.';
+          }
+          return;
+        }
+
+        const hasVotedAlready = await checkExistingVote();
+        if (!hasVotedAlready) {
+          setAllButtonsUnlocked();
+        }
+      } catch (err) {
+        console.error('Initialisation du sondage:', err);
+        if (statusEl) {
+          statusEl.hidden = false;
+          statusEl.textContent = 'Le sondage est indisponible pour le moment.';
+        }
+        setAllButtonsLocked();
+      }
+    }
+
+    async function sendVote(choice) {
+      const rawName = getRawNameFromQuery();
+      if (!rawName) {
+        const errEl = document.getElementById('confirmErr');
+        document.getElementById('confirmIcon').textContent = '⚠️';
+        document.getElementById('confirmTitle').textContent = 'Nom manquant';
+        document.getElementById('confirmMsg').textContent = 'Le paramètre ?name=... est requis pour voter.';
+        errEl.textContent = '';
+        errEl.style.display = 'none';
+        document.getElementById('overlay').classList.add('is-active');
+        document.body.style.overflow = 'hidden';
+        return;
+      }
+
+      if (!POLL_ID) {
+        await loadPollConfig();
+      }
+
+      const optionId = OPTION_IDS[choice];
+      if (!optionId) {
+        throw new Error(`Option inconnue : ${choice}`);
+      }
+
+      setAllButtonsLocked(choice);
+
+      const c = CONFIRM[choice];
+      document.getElementById('confirmIcon').textContent = c.icon;
+      document.getElementById('confirmTitle').textContent = c.title;
+      document.getElementById('confirmMsg').textContent = c.msg;
+      document.getElementById('confirmErr').style.display = 'none';
+      document.getElementById('overlay').classList.add('is-active');
+      document.body.style.overflow = 'hidden';
+
+      try {
+        const res = await fetch(`${POLL_BASE}/create/vote`, {
           method: 'POST',
           headers: {
+            'Accept': 'application/json',
             'Content-Type': 'application/json',
             'api-key': API_KEY,
           },
           body: JSON.stringify({
-            identifier: POLL_ID,
-            option_id:  OPTION_IDS[choice],
-            // TODO : ajouter d'autres champs requis par l'API si nécessaire
+            poll_id: POLL_ID,
+            option_id: optionId,
+            identifier: rawName,
           }),
         });
 
         if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
+          const payloadText = await res.text();
+          throw new Error(`HTTP ${res.status} — ${payloadText || 'vote rejected'}`);
         }
 
-        // const data = await res.json();
-        // console.log('Vote enregistré :', data);
-
+        CURRENT_VOTE = choice;
+        showVoteStatus(choice);
+        setAllButtonsLocked(choice);
       } catch (err) {
         console.error("Échec de l'envoi du vote :", err);
         const errEl = document.getElementById('confirmErr');
         errEl.textContent = "⚠ Erreur réseau — ton vote n'a peut-être pas été enregistré.";
         errEl.style.display = 'block';
+        setAllButtonsUnlocked();
       }
     }
 
-    /* ================================================================
-       FERMETURE DE L'OVERLAY
-       ================================================================ */
     function closeOverlay() {
       document.getElementById('overlay').classList.remove('is-active');
-      document.body.style.overflow = ''; // restaure le scroll
+      document.body.style.overflow = '';
     }
 
-    // Clic sur le fond de l'overlay pour fermer
     document.getElementById('overlay').addEventListener('click', function (e) {
       if (e.target === this) closeOverlay();
     });
+
+    initializePage();
   </script>
 </body>
 </html>
